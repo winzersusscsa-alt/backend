@@ -1,3 +1,4 @@
+// backend/server.js
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
@@ -32,7 +33,7 @@ function authenticate(req, res, next) {
 // AUTHENTICATION ROUTES
 // ============================================================
 
-// Login
+// Login (for both Admin and Dropshipper)
 app.post('/api/auth/login', async (req, res) => {
   const { username, password } = req.body;
   try {
@@ -54,7 +55,7 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
-// Admin: Create User
+// Admin: Create a new Dropshipper User
 app.post('/api/admin/users', authenticate, async (req, res) => {
   if (req.user.role !== 'ADMIN') return res.status(403).json({ error: 'Admin only' });
 
@@ -66,7 +67,7 @@ app.post('/api/admin/users', authenticate, async (req, res) => {
     });
     res.status(201).json({ message: 'User created', user });
   } catch (error) {
-    res.status(400).json({ error: 'Username already exists' });
+    res.status(400).json({ error: 'Username already exists or invalid data' });
   }
 });
 
@@ -179,6 +180,54 @@ app.get('/api/orders', authenticate, async (req, res) => {
       orderBy: { createdAt: 'desc' },
     });
     res.json(orders);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ⭐ NEW: Dropshipper: Edit Order (with 2-hour check)
+app.put('/api/orders/:id', authenticate, async (req, res) => {
+  const { id } = req.params;
+  const { customerName, address, postalCode, phone1, phone2 } = req.body;
+  try {
+    const order = await prisma.order.findUnique({ where: { id: parseInt(id) } });
+    if (!order) return res.status(404).json({ error: 'Order not found' });
+    if (order.dropshipperId !== req.user.id) return res.status(403).json({ error: 'Not your order' });
+    
+    const now = new Date();
+    const created = new Date(order.createdAt);
+    const diffHours = (now - created) / (1000 * 60 * 60);
+    if (diffHours > 2) {
+      return res.status(403).json({ error: 'Cannot edit after 2 hours' });
+    }
+
+    const updated = await prisma.order.update({
+      where: { id: parseInt(id) },
+      data: { customerName, address, postalCode, phone1, phone2 }
+    });
+    res.json(updated);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ⭐ NEW: Dropshipper: Delete Order (with 2-hour check)
+app.delete('/api/orders/:id', authenticate, async (req, res) => {
+  const { id } = req.params;
+  try {
+    const order = await prisma.order.findUnique({ where: { id: parseInt(id) } });
+    if (!order) return res.status(404).json({ error: 'Order not found' });
+    if (order.dropshipperId !== req.user.id) return res.status(403).json({ error: 'Not your order' });
+    
+    const now = new Date();
+    const created = new Date(order.createdAt);
+    const diffHours = (now - created) / (1000 * 60 * 60);
+    if (diffHours > 2) {
+      return res.status(403).json({ error: 'Cannot delete after 2 hours' });
+    }
+
+    await prisma.order.delete({ where: { id: parseInt(id) } });
+    res.json({ message: 'Order deleted' });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
