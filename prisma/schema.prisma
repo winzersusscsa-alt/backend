@@ -1,0 +1,84 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  username     String   @unique
+  passwordHash String
+  role         Role     @default(DROPSHIPPER)
+  phoneNumber  String?
+  createdAt    DateTime @default(now())
+
+  orders       Order[]
+  bankDetails  BankDetail?
+  payments     PaymentRecord[]
+}
+
+model Product {
+  id             Int      @id @default(autoincrement())
+  title          String
+  description    String
+  price          Float
+  deliveryCharge Float
+  deliveryMinDays Int
+  deliveryMaxDays Int
+  image          String
+  note           String?
+  isHidden       Boolean  @default(false) // false = Available
+  createdAt      DateTime @default(now())
+}
+
+model Order {
+  id            Int      @id @default(autoincrement())
+  orderNumber   Int      @unique
+  dropshipperId Int
+  dropshipper   User     @relation(fields: [dropshipperId], references: [id])
+  customerName  String
+  address       String
+  postalCode    String
+  phone1        String
+  phone2        String?
+  status        OrderStatus @default(PROCESSING)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model BankDetail {
+  id            Int      @id @default(autoincrement())
+  dropshipperId Int      @unique
+  dropshipper   User     @relation(fields: [dropshipperId], references: [id])
+  bankName      String
+  branch        String
+  accountHolder String
+  accountNumber String
+}
+
+model PaymentRecord {
+  id            Int      @id @default(autoincrement())
+  dropshipperId Int
+  dropshipper   User     @relation(fields: [dropshipperId], references: [id])
+  paymentDate   DateTime
+  amount        Float
+  accountNumber String
+  proofUrl      String?
+  createdAt     DateTime @default(now())
+}
+
+enum Role {
+  ADMIN
+  DROPSHIPPER
+}
+
+enum OrderStatus {
+  PROCESSING
+  DELIVERED
+  COMPLETED
+  CANCELLED
+  REJECTED
+}
