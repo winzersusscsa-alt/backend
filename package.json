@@ -1,0 +1,21 @@
+{
+  "name": "dropship-backend",
+  "version": "1.0.0",
+  "description": "Dropshipping Hub Backend",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "build": "npx prisma generate && npx prisma db push"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.0.3",
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^9.0.0",
+    "@prisma/client": "^5.0.0"
+  },
+  "devDependencies": {
+    "prisma": "^5.0.0"
+  }
+}
