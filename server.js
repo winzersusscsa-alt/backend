@@ -73,6 +73,92 @@ app.post('/api/admin/users', authenticate, async (req, res) => {
 
 
 // ============================================================
+// ADMIN: USER MANAGEMENT
+// ============================================================
+
+// Admin: Get All Users
+app.get('/api/admin/users', authenticate, async (req, res) => {
+  if (req.user.role !== 'ADMIN') return res.status(403).json({ error: 'Admin only' });
+  try {
+    const users = await prisma.user.findMany({
+      where: { role: 'DROPSHIPPER' },
+      select: {
+        id: true,
+        username: true,
+        phoneNumber: true,
+        role: true,
+        createdAt: true
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+    res.json(users);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Admin: Get Single User
+app.get('/api/admin/users/:id', authenticate, async (req, res) => {
+  if (req.user.role !== 'ADMIN') return res.status(403).json({ error: 'Admin only' });
+  const { id } = req.params;
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: parseInt(id) },
+      select: {
+        id: true,
+        username: true,
+        phoneNumber: true,
+        role: true,
+        createdAt: true
+      }
+    });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    res.json(user);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Admin: Update User
+app.put('/api/admin/users/:id', authenticate, async (req, res) => {
+  if (req.user.role !== 'ADMIN') return res.status(403).json({ error: 'Admin only' });
+  const { id } = req.params;
+  const { username, password, phoneNumber } = req.body;
+  try {
+    const data = { username, phoneNumber };
+    if (password && password.trim() !== '') {
+      data.passwordHash = await bcrypt.hash(password, 10);
+    }
+    const user = await prisma.user.update({
+      where: { id: parseInt(id) },
+      data
+    });
+    res.json({ message: 'User updated', user });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Admin: Delete User
+app.delete('/api/admin/users/:id', authenticate, async (req, res) => {
+  if (req.user.role !== 'ADMIN') return res.status(403).json({ error: 'Admin only' });
+  const { id } = req.params;
+  try {
+    // Prevent admin from deleting themselves
+    if (parseInt(id) === req.user.id) {
+      return res.status(400).json({ error: 'Cannot delete your own account' });
+    }
+    await prisma.user.delete({
+      where: { id: parseInt(id) }
+    });
+    res.json({ message: 'User deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+
+// ============================================================
 // PRODUCT ROUTES
 // ============================================================
 
