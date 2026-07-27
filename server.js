@@ -73,49 +73,6 @@ app.post('/api/admin/users', authenticate, async (req, res) => {
 
 
 // ============================================================
-// TEMPORARY: Create Admin User (Remove after first use)
-// ============================================================
-app.get('/setup/create-admin', async (req, res) => {
-  try {
-    // Check if admin already exists
-    const existingAdmin = await prisma.user.findFirst({
-      where: { role: 'ADMIN' }
-    });
-
-    if (existingAdmin) {
-      return res.json({ 
-        message: '✅ Admin already exists!',
-        username: existingAdmin.username,
-        role: existingAdmin.role
-      });
-    }
-
-    // Hash the password "admin123"
-    const hashedPassword = await bcrypt.hash('admin123', 10);
-
-    // Create the admin user
-    const admin = await prisma.user.create({
-      data: {
-        username: 'admin',
-        passwordHash: hashedPassword,
-        role: 'ADMIN',
-        phoneNumber: '0000000000' // Placeholder
-      }
-    });
-
-    res.json({
-      message: '🎉 Admin user created successfully!',
-      username: admin.username,
-      password: 'admin123',
-      role: admin.role
-    });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-
-// ============================================================
 // PRODUCT ROUTES
 // ============================================================
 
