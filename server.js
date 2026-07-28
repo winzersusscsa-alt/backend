@@ -462,6 +462,27 @@ app.put('/api/admin/orders/:id/status', authenticate, async (req, res) => {
   }
 });
 
+// Admin: Bulk Delete Orders
+app.delete('/api/admin/orders/bulk', authenticate, async (req, res) => {
+  if (req.user.role !== 'ADMIN') return res.status(403).json({ error: 'Admin only' });
+  
+  const { orderIds } = req.body;
+  if (!orderIds || !Array.isArray(orderIds) || orderIds.length === 0) {
+    return res.status(400).json({ error: 'Please provide an array of order IDs' });
+  }
+
+  try {
+    const deleted = await prisma.order.deleteMany({
+      where: {
+        id: { in: orderIds.map(id => parseInt(id)) }
+      }
+    });
+    res.json({ message: `${deleted.count} orders deleted successfully`, count: deleted.count });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // ============================================================
 // START THE SERVER
 // ============================================================
