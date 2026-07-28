@@ -159,6 +159,118 @@ app.delete('/api/admin/users/:id', authenticate, async (req, res) => {
 
 
 // ============================================================
+// BANK DETAILS & PAYMENTS
+// ============================================================
+
+// Dropshipper: Save or Update Bank Details
+app.post('/api/bank-details', authenticate, async (req, res) => {
+  const { bankName, branch, accountHolder, accountNumber } = req.body;
+  try {
+    // Check if bank details already exist for this user
+    const existing = await prisma.bankDetail.findUnique({
+      where: { dropshipperId: req.user.id }
+    });
+
+    let bankDetail;
+    if (existing) {
+      // Update existing
+      bankDetail = await prisma.bankDetail.update({
+        where: { dropshipperId: req.user.id },
+        data: { bankName, branch, accountHolder, accountNumber }
+      });
+    } else {
+      // Create new
+      bankDetail = await prisma.bankDetail.create({
+        data: {
+          dropshipperId: req.user.id,
+          bankName,
+          branch,
+          accountHolder,
+          accountNumber
+        }
+      });
+    }
+    res.json({ message: 'Bank details saved successfully', bankDetail });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Dropshipper: Get My Bank Details
+app.get('/api/bank-details', authenticate, async (req, res) => {
+  try {
+    const bankDetail = await prisma.bankDetail.findUnique({
+      where: { dropshipperId: req.user.id }
+    });
+    res.json(bankDetail || null);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Dropshipper: Get My Payment History
+app.get('/api/payments', authenticate, async (req, res) => {
+  try {
+    const payments = await prisma.paymentRecord.findMany({
+      where: { dropshipperId: req.user.id },
+      orderBy: { paymentDate: 'desc' }
+    });
+    res.json(payments);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Admin: Add Payment (sends money to dropshipper)
+app.post('/api/admin/payments', authenticate, async (req, res) => {
+  if (req.user.role !== 'ADMIN') return res.status(403).json({ error: 'Admin only' });
+  
+  const { dropshipperId, paymentDate, amount, accountNumber, proofUrl } = req.body;
+  try {
+    const payment = await prisma.paymentRecord.create({
+      data: {
+        dropshipperId: parseInt(dropshipperId),
+        paymentDate: new Date(paymentDate),
+        amount: parseFloat(amount),
+        accountNumber,
+        proofUrl: proofUrl || ''
+      }
+    });
+    res.status(201).json({ message: 'Payment record added', payment });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Admin: Get All Payment Records (with dropshipper info)
+app.get('/api/admin/payments', authenticate, async (req, res) => {
+  if (req.user.role !== 'ADMIN') return res.status(403).json({ error: 'Admin only' });
+  try {
+    const payments = await prisma.paymentRecord.findMany({
+      include: { dropshipper: true },
+      orderBy: { paymentDate: 'desc' }
+    });
+    res.json(payments);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Admin: Get All Bank Details
+app.get('/api/admin/bank-details', authenticate, async (req, res) => {
+  if (req.user.role !== 'ADMIN') return res.status(403).json({ error: 'Admin only' });
+  try {
+    const bankDetails = await prisma.bankDetail.findMany({
+      include: { dropshipper: true }
+    });
+    res.json(bankDetails);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+
+// ============================================================
 // PRODUCT ROUTES
 // ============================================================
 
