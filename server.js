@@ -342,6 +342,56 @@ app.get('/api/admin/products', authenticate, async (req, res) => {
   }
 });
 
+
+// ============================================================
+// PRODUCT MANAGEMENT (Admin) - EDIT & DELETE
+// ============================================================
+
+// Admin: Edit Product (Update all fields)
+app.put('/api/admin/products/:id', authenticate, async (req, res) => {
+  if (req.user.role !== 'ADMIN') return res.status(403).json({ error: 'Admin only' });
+
+  const { id } = req.params;
+  const { title, description, price, deliveryCharge, deliveryMinDays, deliveryMaxDays, image, note, isHidden } = req.body;
+
+  try {
+    const product = await prisma.product.update({
+      where: { id: parseInt(id) },
+      data: {
+        title,
+        description,
+        price: parseFloat(price),
+        deliveryCharge: parseFloat(deliveryCharge),
+        deliveryMinDays: parseInt(deliveryMinDays),
+        deliveryMaxDays: parseInt(deliveryMaxDays),
+        image,
+        note,
+        isHidden: isHidden !== undefined ? isHidden : false
+      }
+    });
+    res.json({ message: 'Product updated successfully', product });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Admin: Delete Product
+app.delete('/api/admin/products/:id', authenticate, async (req, res) => {
+  if (req.user.role !== 'ADMIN') return res.status(403).json({ error: 'Admin only' });
+
+  const { id } = req.params;
+
+  try {
+    await prisma.product.delete({
+      where: { id: parseInt(id) }
+    });
+    res.json({ message: 'Product deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+
 // ============================================================
 // ORDER ROUTES
 // ============================================================
