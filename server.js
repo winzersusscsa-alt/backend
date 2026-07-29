@@ -462,6 +462,32 @@ app.put('/api/admin/orders/:id/status', authenticate, async (req, res) => {
   }
 });
 
+// Admin: Update Full Order (all fields)
+app.put('/api/admin/orders/:id', authenticate, async (req, res) => {
+  if (req.user.role !== 'ADMIN') return res.status(403).json({ error: 'Admin only' });
+  
+  const { id } = req.params;
+  const { customerName, address, postalCode, phone1, phone2, status } = req.body;
+  
+  try {
+    const order = await prisma.order.update({
+      where: { id: parseInt(id) },
+      data: {
+        customerName,
+        address,
+        postalCode,
+        phone1,
+        phone2,
+        status
+      }
+    });
+    res.json({ message: 'Order updated successfully', order });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+
 // Admin: Bulk Delete Orders
 app.delete('/api/admin/orders/bulk', authenticate, async (req, res) => {
   if (req.user.role !== 'ADMIN') return res.status(403).json({ error: 'Admin only' });
